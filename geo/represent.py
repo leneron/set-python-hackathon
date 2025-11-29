@@ -30,7 +30,7 @@ def map_recommendations(m, recommended):
 
 
 def map_locations(m, locations, name):
-    for _, row in locations.iterrows():
+    for row in locations:
         if name == "parks":
                 color = "green"
                 popup = "Park"
@@ -44,7 +44,7 @@ def map_locations(m, locations, name):
                 popup = "Metro"
                 icon="train"
         folium.Marker(
-            location=[row.geometry.y, row.geometry.x],
+            location=[row.y, row.x],
             popup=popup,
             icon=folium.Icon(icon=icon, prefix='fa', color=color, popup=popup)
         ).add_to(m)
@@ -55,9 +55,12 @@ def display_map(candidates, restaurants, parks, metro, show_locations=False):
 
     map_recommendations(m, candidates)
     if show_locations:
-        map_locations(m, restaurants, "restaurants")
-        map_locations(m, parks, "parks")
-        map_locations(m, metro, "metro")
+        unique_park_locations = candidates['park_location'].unique()
+        unique_restaurants_locations = candidates['rest_location'].unique()
+        unique_metro_locations = candidates['metro_location'].unique()
+        map_locations(m, unique_restaurants_locations, "restaurants")
+        map_locations(m, unique_park_locations, "parks")
+        map_locations(m, unique_metro_locations, "metro")
 
     st_folium(m, use_container_width=True)
 
@@ -73,6 +76,5 @@ if __name__ == "__main__":
     st.set_page_config(layout='wide')
     st.title("City Pulse Lab")
     candidates, restaurants, parks, metro = load_data()
-    display_map(candidates, restaurants, parks, metro)
-    #display_map(nicerest)
+    display_map(candidates, restaurants, parks, metro, False)
 
