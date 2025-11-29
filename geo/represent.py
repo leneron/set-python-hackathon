@@ -38,7 +38,7 @@ def map_locations(m, locations, name):
         elif name == "restaurants":
                 color = "red"
                 popup = "Restaurant"
-                icon="leaf"
+                icon="utensils"
         elif name == "metro":
                 color = "blue"
                 popup = "Metro"
@@ -69,12 +69,12 @@ def display_map(candidates, restaurants, parks, metro, show_locations=False):
 def load_data():
     rests_parks_metros = prepare_data()
     candidates = get_nicest_locations(rests_parks_metros)
-    return candidates, *rests_parks_metros
+    return candidates[ 450.0 / abs(candidates["score"]) > 4], *rests_parks_metros
 
 
 if __name__ == "__main__":
     st.set_page_config(layout='wide')
     st.title("City Pulse Lab")
     candidates, restaurants, parks, metro = load_data()
-    display_map(candidates, restaurants, parks, metro, False)
+    display_map(candidates, restaurants, parks, metro, True)
 
