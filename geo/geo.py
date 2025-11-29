@@ -1,5 +1,5 @@
 import os
-
+import pandas as pd
 import geopandas as gpd
 from shapely import wkt
 
@@ -33,8 +33,17 @@ def get_entities_from_csv(
         df.columns = df_columns
     print(df.columns)
     if polygon_to_location:
-        # TODO: implement polygon -> location
-        pass
+        def geometry_wkt_to_point_wkt(geometry_wkt: str):
+            if pd.isna(geometry_wkt):
+                return None
+            try:
+                geometry = wkt.loads(geometry_wkt)
+                point = geometry.representative_point()
+                return f"POINT ({point.x} {point.y})"
+            except Exception:
+                return None
+
+        df["Location"] = df["Location"].apply(geometry_wkt_to_point_wkt)
     df["Location"] = df["Location"].apply(safe_wkt_loads)
     df = df.dropna(subset=['Location'])
     print(df.columns)
