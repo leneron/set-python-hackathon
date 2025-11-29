@@ -1,14 +1,71 @@
-import geopandas
+import os
 
-DATA_DIR = "../data/"
+import geopandas as gpd
+from shapely import wkt
 
-subway = geopandas.read_file(f'{DATA_DIR}/MTA_Subway_Stations_20251129.csv')
-parks = geopandas.read_file(f'{DATA_DIR}/Parks_Properties_20251129.csv')
-restaurants = geopandas.read_file(f'{DATA_DIR}/nyc_restaurant_dohmh_20251129.csv')
-restaurants_insp = geopandas.read_file(f'{DATA_DIR}/DOHMH_New_York_City_Restaurant_Inspection_Results_20251129.csv')
+DATA_DIR = "../data"
+METRO_FILEPATH = DATA_DIR + os.sep + "MTA_Subway_Stations_20251129.csv"
+RESTAURANTS_FILEPATH = DATA_DIR + os.sep + "DOHMH_New_York_City_Restaurant_Inspection_Results_20251129.csv"
+VIOLATIONS_FILEPATH = DATA_DIR + os.sep + "nyc_restaurant_dohmh_20251129.csv"
+PARKS_FILEPATH = DATA_DIR + os.sep + "parks.csv"
+
+# subway = geopandas.read_file(f'{DATA_DIR}/MTA_Subway_Stations_20251129.csv')
+# parks = geopandas.read_file(f'{DATA_DIR}/Parks_Properties_20251129.csv')
+# restaurants = geopandas.read_file(f'{DATA_DIR}/nyc_restaurant_dohmh_20251129.csv')
+# restaurants_insp = geopandas.read_file(f'{DATA_DIR}/DOHMH_New_York_City_Restaurant_Inspection_Results_20251129.csv')
+
+def safe_wkt_loads(location):
+    try:
+        return wkt.loads(location)
+    except Exception:
+        return None
 
 
-print(subway)
-print(parks)
-print(restaurants)
-print(restaurants_insp)
+def get_entities_from_csv(
+        filepath: str,
+        source_columns: tuple,
+        df_columns: tuple = ("Name", "Location"),
+        polygon_to_location: bool = False
+) -> gpd.GeoDataFrame:
+    df = gpd.read_file(filepath, columns=source_columns)
+    print(df.columns)
+    if df_columns:
+        df.columns = df_columns
+    print(df.columns)
+    if polygon_to_location:
+        # TODO: implement polygon -> location
+        pass
+    df["Location"] = df["Location"].apply(safe_wkt_loads)
+    df = df.dropna(subset=['Location'])
+    print(df.columns)
+    return df
+
+def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    metro_locations = get_entities_from_csv(
+        filepath=METRO_FILEPATH,
+        source_columns=('Stop Name', 'Georeference')
+    )
+
+    restaurants_locations = get_entities_from_csv(
+        filepath=RESTAURANTS_FILEPATH,
+        source_columns=('DBA', 'VIOLATION CODE', 'Location'),
+        df_columns=("Name", "ViolationCode", "Location")
+    )
+
+    nice_restaurants_locations = restaurants_locations.loc[
+        (restaurants_locations["ViolationCode"].isna()) | (restaurants_locations["ViolationCode"] == ""),
+        ["Name", "Location"]
+    ]
+
+    print(f"Only {len(nice_restaurants_locations)}/{len(restaurants_locations)} restaurants seem to be nice")
+
+    parks_locations = get_entities_from_csv(
+        filepath=PARKS_FILEPATH,
+        source_columns=('SIGNNAME', 'Location'),
+        polygon_to_location=True
+    )
+
+    return nice_restaurants_locations,  parks_locations, metro_locations
+
+if __name__ == "__main__":
+    nicerest, parks, metro = prepare_data()
