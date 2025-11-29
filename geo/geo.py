@@ -21,13 +21,6 @@ def safe_wkt_loads(location):
         return None
 
 
-def read_svc_geopandas(svc_path, location_field):
-    table_svc = pandas.read_csv(svc_path)
-    s = geopandas.GeoSeries.from_wkt(table_svc[location_field])
-    table = geopandas.GeoDataFrame(data=table_svc, geometry=s)
-    return table
-
-
 def get_entities_from_csv(
         filepath: str,
         source_columns: tuple,
