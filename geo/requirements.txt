@@ -1,3 +1,4 @@
 geopandas[all]
 geodatasets
 streamlit-folium
+streamlit_js_eval

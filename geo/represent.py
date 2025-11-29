@@ -1,43 +1,74 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-
-from geo import prepare_data
+from streamlit_js_eval import streamlit_js_eval
+import random
+import geo
 from search_for_events import get_nicest_locations
 
+from geo import prepare_data
+#from search_for_events import get_nicest_locations
 
-def display_map(locations):
-    print(f"Displaying map with {len(locations)} locations.")
-    # Створюємо базову карту
-    m = folium.Map(location=[40.7128, -74.0060], zoom_start=12)  # Центр карти (наприклад, Нью-Йорк)
-
-    # Додаємо метро на мапу
-    for _, row in locations.iterrows():
-        if row["total_score"] < 30:
+def map_recommendations(m, recommended):
+    for _, row in recommended.iterrows():
+        if row["score"] < -500:
             continue
-        if row["total_score"] < 50:
+        print(row["score"])
+        if row["score"] < -400:
             color = "red"
-            popup = "Fair"
-        elif row["total_score"] < 70:
-            color = "yellow"
-            popup = "Fine"
+            popup = "Fair location"
+        elif row["score"] < -300:
+            color = "orange"
+            popup = "Fine location"
         else:
             color = "green"
-            popup = "Nice!"
-        folium.CircleMarker(
+            popup = "Recommended location"
+        folium.Marker(
             location=[row.geometry.y, row.geometry.x],
-            radius=5,
             popup=popup,
-            color=color,
-            fill=True,
-            fill_color=color
+            icon=folium.Icon(icon="info-circle", prefix='fa', color=color)
         ).add_to(m)
 
-    # Відображення мапи через streamlit-folium
-    st.title("Maps of Entities")
-    st_folium(m, width=700, height=500)
+def map_locations(m, locations, name):
+    for _, row in locations.iterrows():
+        if name == "parks":
+                color = "green"
+                popup = "Park"
+                icon="leaf"
+        elif name == "restaurants":
+                color = "red"
+                popup = "Restaurant"
+                icon="leaf"
+        elif name == "metro":
+                color = "blue"
+                popup = "Metro"
+                icon="train"
+        folium.Marker(
+            location=[row.geometry.y, row.geometry.x],
+            popup=popup,
+            icon=folium.Icon(icon=icon, prefix='fa', color=color, popup=popup)
+        ).add_to(m)
 
+def display_map(candidates, restaurants, parks, metro):
+    m = folium.Map(location=[40.7128, -74.0060], zoom_start=12)
 
-# Приклад запуску (замініть на ваші дані)
+    map_recommendations(m, candidates)
+    map_locations(m, restaurants, "restaurants")
+    map_locations(m, parks, "parks")
+    map_locations(m, metro, "metro")
+
+    st_folium(m, use_container_width=True)
+
+@st.cache_data
+def load_data():
+    restaurants, parks, metro = prepare_data()
+    candidates = get_nicest_locations()
+    return candidates, restaurants, parks, metro
+
 if __name__ == "__main__":
-    display_map(get_nicest_locations())
+    st.set_page_config(layout='wide')
+    st.title("City Pulse Lab")
+    candidates, restaurants, parks, metro = load_data()
+    display_map(candidates, restaurants, parks, metro)
+    #display_map(nicerest)
+
