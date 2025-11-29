@@ -19,7 +19,19 @@ def safe_wkt_loads(location):
         return wkt.loads(location)
     except Exception:
         return None
-
+    
+def geometry_wkt_to_point_wkt(geometry_wkt: str):
+    if pd.isna(geometry_wkt):
+        return None
+    try:
+        geometry = wkt.loads(geometry_wkt)
+    except Exception:
+        return None
+    try:
+        point = geometry.representative_point()
+        return f"POINT ({point.x} {point.y})"
+    except Exception:
+        return None
 
 def get_entities_from_csv(
         filepath: str,
@@ -31,18 +43,6 @@ def get_entities_from_csv(
     if df_columns:
         df.columns = df_columns
     if polygon_to_location:
-        def geometry_wkt_to_point_wkt(geometry_wkt: str):
-            if pd.isna(geometry_wkt):
-                return None
-            try:
-                geometry = wkt.loads(geometry_wkt)
-            except Exception:
-                return None
-            try:
-                point = geometry.representative_point()
-                return f"POINT ({point.x} {point.y})"
-            except Exception:
-                return None
         df["Location"] = df["Location"].apply(geometry_wkt_to_point_wkt)       
     df["geometry"] = df["Location"].apply(safe_wkt_loads)
     geo_df = gpd.GeoDataFrame(df, geometry="geometry")
