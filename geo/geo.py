@@ -35,6 +35,7 @@ def get_entities_from_csv(
         pass
     df["geometry"] = df["Location"].apply(safe_wkt_loads)
     geo_df = gpd.GeoDataFrame(df, geometry="geometry")
+    geo_df = geo_df[geo_df.geometry.notna()]
     return geo_df
 
 def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
@@ -64,8 +65,8 @@ def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame
 
     return nice_restaurants_locations,  parks_locations, metro_locations
 
-if __name__ == "__main__":
-    nicerest, parks, metro = prepare_data()
-
-    rest_with_metro = gpd.sjoin_nearest(nicerest, metro)
-    print(rest_with_metro)
+# if __name__ == "__main__":
+#     nicerest, parks, metro = prepare_data()
+#
+#     rest_with_metro = gpd.sjoin_nearest(nicerest, metro)
+#     print(rest_with_metro)
