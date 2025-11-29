@@ -71,4 +71,4 @@ def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame
         polygon_to_location=True
     )
 
-    return nice_restaurants_locations,  parks_locations, metro_locations
+    return nice_restaurants_locations, parks_locations, metro_locations

@@ -60,9 +60,9 @@ def display_map(candidates, restaurants, parks, metro):
 
 @st.cache_data
 def load_data():
-    restaurants, parks, metro = prepare_data()
-    candidates = get_nicest_locations()
-    return candidates, restaurants, parks, metro
+    rests_parks_metros = prepare_data()
+    candidates = get_nicest_locations(rests_parks_metros)
+    return candidates, *rests_parks_metros
 
 if __name__ == "__main__":
     st.set_page_config(layout='wide')
