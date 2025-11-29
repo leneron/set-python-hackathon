@@ -1,66 +1,51 @@
-from shapely.geometry import Point
 import geopandas as gpd
+import pandas as pd
+from shapely.geometry import Point
 import numpy as np
 from sklearn.neighbors import BallTree
 from geo import prepare_data
 
 
-def generate_grid(bbox, spacing=0.0045):
+def calculate_distances(candidates, reference_gdf, radius=1000):
     """
-    Створює сітку точок для заданого bounding box (BBox) з визначеним відступом (spacing).
-    Spacing задається у градусах (~0.0045 градуса ≈ 500 м).
+    Обчислює відстань до найближчих точок із reference_gdf для кожної точки кандидатів.
     """
-    minx, miny, maxx, maxy = bbox
-    x_coords = np.arange(minx, maxx, spacing)
-    y_coords = np.arange(miny, maxy, spacing)
-    points = [Point(x, y) for x in x_coords for y in y_coords]
-    return gpd.GeoDataFrame(geometry=points, crs="EPSG:4326")
+    # Конвертація в радіани (BallTree вимагає радіан для точок координат)
+    candidates_radians = np.radians(np.array(list(candidates.geometry.apply(lambda p: [p.x, p.y]))))
+    reference_radians = np.radians(np.array(list(reference_gdf.geometry.apply(lambda p: [p.x, p.y]))))
+
+    # Побудова дерева для запитів
+    tree = BallTree(reference_radians, metric='haversine')
+
+    # Шукаємо найближчі точки
+    distances, _ = tree.query(candidates_radians, k=1)
+    # Конвертуємо відстані з радіан у метри (радіус Землі ~6371 км)
+    distances_in_meters = distances * 6371000  # Земля в метрах
+    return distances_in_meters
 
 
-def rate_locations_by_proximity(target_df, sources, radii, weights):
-    """
-    Оцінює локації (target_df) на основі близькості до джерел (sources).
-    sources: список GeoDataFrame (ресторани, метро, парки)
-    radii: список радіусів пошуку
-    weights: список ваг для кожної категорії
-    """
-    for source_df, radius, weight, category in zip(sources, radii, weights, ['restaurants', 'parks', 'metro']):
-        target_coords = np.array([[geom.x, geom.y] for geom in target_df.geometry])
-        source_coords = np.array([[geom.x, geom.y] for geom in source_df.geometry])
-
-        # BallTree для пошуку сусідів
-        tree = BallTree(source_coords, metric='haversine')
-        counts = tree.query_radius(target_coords, r=radius / 6371000, count_only=True)  # Радіуси в радіанах
-
-        # Додаємо атрибут з оцінками
-        target_df[category] = counts * weight
-
-    # Розрахунок сумарного рейтингу
-    target_df['total_score'] = target_df[['restaurants', 'parks', 'metro']].sum(axis=1)
-    return target_df
-
-
-def get_nicest_locations():
-    # Завантаження даних
+def get_nicest_locations(grid_step=0.01, metro_weight=2.0, rest_weight=1.0, park_weight=3.0):
     nicerest, parks, metro = prepare_data()
 
-    # Приведення CRS даних до EPSG:4326
-    nicerest = nicerest.set_crs("EPSG:4326")
-    parks = parks.set_crs("EPSG:4326")
-    metro = metro.set_crs("EPSG:4326")
+    ny_bbox = (-74.259090, 40.477399, -73.700181, 40.917576)  # Межі Нью-Йорка
+    lon_values = np.arange(ny_bbox[0], ny_bbox[2], grid_step)
+    lat_values = np.arange(ny_bbox[1], ny_bbox[3], grid_step)
+    candidate_points = [Point(lon, lat) for lon in lon_values for lat in lat_values]
+    candidates_gdf = gpd.GeoDataFrame({'geometry': candidate_points}, geometry='geometry')
 
-    # BBox Нью-Йорка у EPSG:4326 (широта/довгота)
-    bbox = [-74.25909, 40.477399, -73.700272, 40.917577]
+    candidates_gdf['dist_to_metro'] = calculate_distances(candidates_gdf, metro)
+    candidates_gdf['dist_to_rest'] = calculate_distances(candidates_gdf, nicerest)
+    candidates_gdf['dist_to_park'] = calculate_distances(candidates_gdf, parks)
 
-    # Генеруємо сітку можливих локацій для Нью-Йорка
-    grid_points = generate_grid(bbox, spacing=0.0045)  # Крок сітки у 0.0045 градуса (~500 м)
+    # Розрахунок рейтингу
+    # Чим ближче до об'єктів, тим вищий рейтинг
+    candidates_gdf['score'] = (
+            - candidates_gdf['dist_to_metro'] * metro_weight
+            - candidates_gdf['dist_to_rest'] * rest_weight
+            - candidates_gdf['dist_to_park'] * park_weight
+    )
 
-    # Розрахунок рейтингу локацій
-    search_radii = [500, 800, 500]  # Радіуси пошуку в метрах
-    category_weights = [1.0, 1.5, 2.0]  # Важливість ресторанів, парків і метро
-    sources = [nicerest, parks, metro]
+    candidates_gdf = candidates_gdf.sort_values(by='score', ascending=False)
 
-    rated_locations = rate_locations_by_proximity(grid_points, sources, search_radii, category_weights)
+    return candidates_gdf
 
-    # Сортуємо за сумарним рейтингом
-    return rated_locations.sort_values(by='total_score', ascending=False)[:100]
