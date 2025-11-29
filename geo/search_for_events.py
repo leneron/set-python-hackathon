@@ -2,7 +2,6 @@ import geopandas as gpd
 from shapely.geometry import Point
 import numpy as np
 from sklearn.neighbors import BallTree
-from geo import prepare_data
 
 
 def calculate_distances_and_names(candidates, reference_gdf, reference_name_column="Name"):
@@ -28,9 +27,9 @@ def create_candidates_to_score(grid_step):
     return gpd.GeoDataFrame({'geometry': candidate_points}, geometry='geometry')
 
 
-def get_nicest_locations(grid_step=0.01, metro_weight=2.0, rest_weight=1.0, park_weight=3.0):
+def get_nicest_locations(rests_parks_metros, grid_step=0.01, metro_weight=2.0, rest_weight=1.0, park_weight=3.0):
     """Find best places in NY according to weitghts."""
-    nicerest, parks, metro = prepare_data()
+    nicerest, parks, metro = rests_parks_metros
     candidates_gdf = create_candidates_to_score(grid_step=grid_step)
 
     candidates_gdf['dist_to_metro'], candidates_gdf['metro_name']  = calculate_distances_and_names(candidates_gdf, metro)

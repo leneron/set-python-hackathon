@@ -9,11 +9,6 @@ RESTAURANTS_FILEPATH = DATA_DIR + os.sep + "DOHMH_New_York_City_Restaurant_Inspe
 VIOLATIONS_FILEPATH = DATA_DIR + os.sep + "nyc_restaurant_dohmh_20251129.csv"
 PARKS_FILEPATH = DATA_DIR + os.sep + "parks.csv"
 
-# subway = geopandas.read_file(f'{DATA_DIR}/MTA_Subway_Stations_20251129.csv')
-# parks = geopandas.read_file(f'{DATA_DIR}/Parks_Properties_20251129.csv')
-# restaurants = geopandas.read_file(f'{DATA_DIR}/nyc_restaurant_dohmh_20251129.csv')
-# restaurants_insp = geopandas.read_file(f'{DATA_DIR}/DOHMH_New_York_City_Restaurant_Inspection_Results_20251129.csv')
-
 def safe_wkt_loads(location):
     try:
         return wkt.loads(location)
@@ -39,6 +34,7 @@ def get_entities_from_csv(
         df_columns: tuple = ("Name", "Location"),
         polygon_to_location: bool = False
 ) -> gpd.GeoDataFrame:
+    """Get names and locations from CSV."""
     df = gpd.read_file(filepath, columns=source_columns)
     if df_columns:
         df.columns = df_columns
@@ -50,6 +46,7 @@ def get_entities_from_csv(
     return geo_df
 
 def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    """Collect entities for provided CSV files."""
     metro_locations = get_entities_from_csv(
         filepath=METRO_FILEPATH,
         source_columns=('Stop Name', 'Georeference')
@@ -75,9 +72,3 @@ def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame
     )
 
     return nice_restaurants_locations,  parks_locations, metro_locations
-
-# if __name__ == "__main__":
-#     nicerest, parks, metro = prepare_data()
-#
-#     rest_with_metro = gpd.sjoin_nearest(nicerest, metro)
-#     print(rest_with_metro)
