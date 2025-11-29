@@ -28,10 +28,8 @@ def get_entities_from_csv(
         polygon_to_location: bool = False
 ) -> gpd.GeoDataFrame:
     df = gpd.read_file(filepath, columns=source_columns)
-    print(df.columns)
     if df_columns:
         df.columns = df_columns
-    print(df.columns)
     if polygon_to_location:
         def geometry_wkt_to_point_wkt(geometry_wkt: str):
             if pd.isna(geometry_wkt):
@@ -48,6 +46,11 @@ def get_entities_from_csv(
     df = df.dropna(subset=['Location'])
     print(df.columns)
     return df
+      
+    df["geometry"] = df["Location"].apply(safe_wkt_loads)
+    geo_df = gpd.GeoDataFrame(df, geometry="geometry")
+    geo_df = geo_df[geo_df.geometry.notna()]
+    return geo_df
 
 def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
     metro_locations = get_entities_from_csv(
@@ -63,7 +66,7 @@ def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame
 
     nice_restaurants_locations = restaurants_locations.loc[
         (restaurants_locations["ViolationCode"].isna()) | (restaurants_locations["ViolationCode"] == ""),
-        ["Name", "Location"]
+        ["Name", "Location", "geometry"]
     ]
 
     print(f"Only {len(nice_restaurants_locations)}/{len(restaurants_locations)} restaurants seem to be nice")
@@ -76,5 +79,8 @@ def prepare_data() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame
 
     return nice_restaurants_locations,  parks_locations, metro_locations
 
-if __name__ == "__main__":
-    nicerest, parks, metro = prepare_data()
+# if __name__ == "__main__":
+#     nicerest, parks, metro = prepare_data()
+#
+#     rest_with_metro = gpd.sjoin_nearest(nicerest, metro)
+#     print(rest_with_metro)
