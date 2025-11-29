@@ -13,7 +13,6 @@ def map_recommendations(m, recommended):
     for _, row in recommended.iterrows():
         if row["score"] < -500:
             continue
-        print(row["score"])
         if row["score"] < -400:
             color = "red"
             popup = "Fair location"
@@ -50,7 +49,7 @@ def map_locations(m, locations, name):
         ).add_to(m)
 
 def display_map(candidates, restaurants, parks, metro):
-    m = folium.Map(location=[40.7128, -74.0060], zoom_start=12)
+    m = folium.Map(location=[40.7128, -74.0060], zoom_start=12, tiles="Cartodb Positron")
 
     map_recommendations(m, candidates)
     map_locations(m, restaurants, "restaurants")
