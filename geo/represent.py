@@ -4,29 +4,30 @@ from streamlit_folium import st_folium
 from streamlit_js_eval import streamlit_js_eval
 import random
 import geo
+from geo import prepare_data
 from search_for_events import get_nicest_locations
 
-from geo import prepare_data
-#from search_for_events import get_nicest_locations
 
 def map_recommendations(m, recommended):
     for _, row in recommended.iterrows():
-        if row["score"] < -500:
+        score = 450.0 / abs(row["score"])
+        if score < 4:
             continue
-        if row["score"] < -400:
+        if score < 5:
             color = "red"
-            popup = "Fair location"
-        elif row["score"] < -300:
+            popup = f"fair score:{score}"
+        elif score < 6:
             color = "orange"
-            popup = "Fine location"
+            popup = f"fine score:{score}"
         else:
             color = "green"
-            popup = "Recommended location"
+            popup = f"good score:{score}"
         folium.Marker(
             location=[row.geometry.y, row.geometry.x],
             popup=popup,
             icon=folium.Icon(icon="info-circle", prefix='fa', color=color)
         ).add_to(m)
+
 
 def map_locations(m, locations, name):
     for _, row in locations.iterrows():
@@ -48,21 +49,25 @@ def map_locations(m, locations, name):
             icon=folium.Icon(icon=icon, prefix='fa', color=color, popup=popup)
         ).add_to(m)
 
-def display_map(candidates, restaurants, parks, metro):
+
+def display_map(candidates, restaurants, parks, metro, show_locations=False):
     m = folium.Map(location=[40.7128, -74.0060], zoom_start=12, tiles="Cartodb Positron")
 
     map_recommendations(m, candidates)
-    map_locations(m, restaurants, "restaurants")
-    map_locations(m, parks, "parks")
-    map_locations(m, metro, "metro")
+    if show_locations:
+        map_locations(m, restaurants, "restaurants")
+        map_locations(m, parks, "parks")
+        map_locations(m, metro, "metro")
 
     st_folium(m, use_container_width=True)
+
 
 @st.cache_data
 def load_data():
     rests_parks_metros = prepare_data()
     candidates = get_nicest_locations(rests_parks_metros)
     return candidates, *rests_parks_metros
+
 
 if __name__ == "__main__":
     st.set_page_config(layout='wide')

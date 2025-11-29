@@ -46,7 +46,7 @@ def create_candidates_to_score(grid_step, *dataframes):
     return gpd.GeoDataFrame({'geometry': candidate_points}, geometry='geometry')
 
 
-def get_nicest_locations(rests_parks_metros, grid_step=0.01, metro_weight=2.0, rest_weight=1.0, park_weight=3.0):
+def get_nicest_locations(rests_parks_metros, grid_step=0.01, metro_weight=2.0, rest_weight=1.0, park_weight=2.0):
     """Find best places in NY according to weitghts."""
     nicerest, parks, metro = rests_parks_metros
     candidates_gdf = create_candidates_to_score(grid_step, nicerest, parks, metro)
@@ -68,7 +68,7 @@ def get_nicest_locations(rests_parks_metros, grid_step=0.01, metro_weight=2.0, r
             - candidates_gdf['dist_to_metro'] * metro_weight
             - candidates_gdf['dist_to_rest'] * rest_weight
             - candidates_gdf['dist_to_park'] * park_weight
-    )
+    ) / sum([metro_weight, rest_weight, park_weight])
 
     candidates_gdf = candidates_gdf.sort_values(by='score', ascending=False)
 
